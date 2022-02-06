@@ -44,11 +44,13 @@ def saveP():
     return
 
 def createP():
-    global mainFile, path, pathAnnotation
+    global mainFile, path, pathAnnotation, pathImg
     path = dirLabel.cget("text") + "/" + nameBox.get("1.0", "end-1c")
     pathAnnotation = path + "/Annotation"
+    pathImg = path + "/Images"
     os.mkdir(path)
     os.mkdir(pathAnnotation)
+    os.mkdir(pathImg)
     newProj.destroy()
     return
 
@@ -97,8 +99,7 @@ def image_selected(event):
     index = imageList.index(ANCHOR)
     file = open(path + "/info.txt", 'r')
     images = file.readlines()
-    imgPath = images[index].removesuffix("\n")
-    img = ImageTk.PhotoImage(Image.open(imgPath))
+    img = ImageTk.PhotoImage(Image.open(pathImg + "/" + images[index].removesuffix("\n")))
 
     canvas.photo = img
     canvas.create_image(0, 0, image=img, anchor='nw')
@@ -126,10 +127,12 @@ def get_image_dir():
 def add_images(fnames):
     mainFile = open(path + "/info.txt", 'a')
     for file in fnames:
-        mainFile.write(file + '\n') #TODO copy added images to project
+        img = Image.open(file)
         parts = file.split('/')
         file = parts[len(parts) - 1]
         imageList.insert(END, file)
+        img.save(pathImg + "/" + file)
+        mainFile.write(file + '\n')
     mainFile.close()
     return
 
