@@ -54,7 +54,7 @@ def createP():
     newProj.destroy()
     return
 
-def Classes():
+'''def Classes():
     cW = Tk()
     cW.title("Classes")
     cW.geometry("200x300")
@@ -67,29 +67,11 @@ def Classes():
     global cText
     cText = Text(cW, height=1, width=20)
     cText.place(x=5, y=180)
-    addClassButton = Button(cW, text='Add', command=add_Class)
+    #addClassButton = Button(cW, text='Add', command=add_Class)
     addClassButton.place(x=5, y=200)
-    delClassButton = Button(cW, text='Delete', command=del_Class)
+    #delClassButton = Button(cW, text='Delete', command=del_Class)
     delClassButton.place(x=50, y=200)
-    return
-
-def add_Class():
-    name = cText.get("1.0", "end-1c")
-    classList.insert(END, name)
-    allClasses.append(classList.get(END))
-    classLFile = open(path + "/classes.txt", 'a')
-    classLFile.write(name + "\n")
-    classLFile.close()
-    return
-
-def del_Class():
-    allClasses.remove(classList.get(ANCHOR))
-    classList.delete(ANCHOR)
-    classLFile = open(path + "/classes.txt", 'w')
-    for cl in allClasses:
-        classLFile.write(cl + "\n")
-    classLFile.close()
-    return
+    return'''
 
 def image_open(index):
 
@@ -103,7 +85,7 @@ def image_selected(event):
 
     canvas.photo = img
     canvas.create_image(0, 0, image=img, anchor='nw')
-    objectList.delete(0, END)
+    #objectList.delete(0, END)
     name = imageList.get(ANCHOR).split('.')
     imgAnnotationPath = pathAnnotation + "/" + name[0] + ".txt"
     if os.path.isfile(imgAnnotationPath):
@@ -115,7 +97,7 @@ def display_anotation(imgAnnotationPath):
     anotationData = imgAnnotation.readlines()
     for anData in anotationData:
         className = anData.split(';')
-        objectList.insert(END, className[0])
+        #objectList.insert(END, className[0])
     return
 
 def get_image_dir():
@@ -148,7 +130,7 @@ def draw_rect(event):
         print(x1, y1, x, y)
 
 def add_Obj(x1, y1, x, y): #TODO show object count in a image, next to the name in image list
-    global newObjWind, classes, objClass
+    '''global newObjWind, classes, objClass
     newObjWind = Tk()
     newObjWind.title("New object")
     newObjWind.geometry("200x200")
@@ -158,19 +140,44 @@ def add_Obj(x1, y1, x, y): #TODO show object count in a image, next to the name 
         classes.insert(END, cl)
     classes.grid(column=0, row=0, sticky='nwes')
     classes.place(x=5, y=2)
-    global objSaveText
+    global objSaveText'''
     objSaveText = "{0};{1};{2};{3};".format(x1, y1, x, y)
-    return
-
-def class_select(event): #TODO change behaviour to selecting one class and marking objects for it
-    objClass = classes.get(ANCHOR)
     name = imageList.get(ANCHOR).split('.')
     imgAnnotation = open(pathAnnotation + "/" + name[0] + ".txt", 'a')
     text = objClass + ";" + objSaveText + "\n"
     imgAnnotation.write(text)
     imgAnnotation.close()
-    objectList.insert(END, objClass)
-    newObjWind.destroy()
+    return
+
+def class_select(event):
+    global objClass
+    objClass = classList.get(ANCHOR)
+    '''name = imageList.get(ANCHOR).split('.')
+    imgAnnotation = open(pathAnnotation + "/" + name[0] + ".txt", 'a')
+    text = objClass + ";" + objSaveText + "\n"
+    imgAnnotation.write(text)
+    imgAnnotation.close()
+    classList.insert(END, objClass)
+    newObjWind.destroy()'''
+    return
+
+def add_Class():
+    name = cText.get("1.0", "end-1c")
+    classList.insert(END, name)
+    cText.delete("1.0", "end-1c")
+    allClasses.append(classList.get(END))
+    classLFile = open(path + "/classes.txt", 'a')
+    classLFile.write(name + "\n")
+    classLFile.close()
+    return
+
+def del_Class():
+    allClasses.remove(classList.get(ANCHOR))
+    classList.delete(ANCHOR)
+    classLFile = open(path + "/classes.txt", 'w')
+    for cl in allClasses:
+        classLFile.write(cl + "\n")
+    classLFile.close()
     return
 
 mb = Menubutton(obj, text="Project", background='gray')
@@ -178,8 +185,8 @@ mb.grid()
 mb.menu = Menu(mb, tearoff=0)
 mb["menu"] = mb.menu
 
-classButton = Button(obj, text='Classes', command=Classes)
-classButton.place(x=75, y=580)
+#classButton = Button(obj, text='Classes', command=Classes)
+#classButton.place(x=75, y=580)
 
 mb.menu.add_command(label="New", command=newP)
 mb.menu.add_command(label="Open", command=openP)
@@ -209,8 +216,16 @@ objLabel.place(x=5, y=230)
 
 allObj = ()
 objVar = StringVar(value=allObj)
-objectList = Listbox(obj, listvariable=objVar, height=20, selectmode='browse')
-objectList.place(x=5, y=250)
+classList = Listbox(obj, listvariable=objVar, height=20, selectmode='browse')
+classList.bind("<<ListboxSelect>>", class_select)
+classList.place(x=5, y=250)
+
+addClassButton = Button(obj, text='Add', command=add_Class)
+addClassButton.place(x=5, y=600)
+delClassButton = Button(obj, text='Delete', command=del_Class)
+delClassButton.place(x=85, y=600)
+cText = Text(obj, height=1, width=10)
+cText.place(x=5, y=580)
 
 obj.mainloop()
 
