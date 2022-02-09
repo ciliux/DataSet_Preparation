@@ -3,13 +3,19 @@ import tkinter
 import tkinter.filedialog
 from tkinter import*
 from PIL import Image, ImageTk
+
+from imageControl import *
+
 obj = Tk()
 
 obj.title("Dataset preparation")
 obj.geometry("1000x700")
 
 allClasses = []
-#TODO divide code through classes, create GitHub repository
+global colors
+colors = ["#FF2400", "#5CFF00", "#00DBFF", "#FF00FF", "#FF7F00", "#D4E01F", "#FF9500"]
+
+#TODO divide code into smaller functions and through classes
 def newP():
     print("New")
     global newProj
@@ -37,6 +43,8 @@ def directory():
 
 def openP():
     print("Open")
+    projDir = tkinter.filedialog.askdirectory()
+    print(projDir)
     return
 
 def saveP():
@@ -96,8 +104,8 @@ def display_anotation(imgAnnotationPath):
     imgAnnotation = open(imgAnnotationPath, 'r')
     anotationData = imgAnnotation.readlines()
     for anData in anotationData:
-        className = anData.split(';')
-        #objectList.insert(END, className[0])
+        annot = anData.split(';')
+        draw_rect1(annot[0], annot[1], annot[2], annot[3], annot[4])
     return
 
 def get_image_dir():
@@ -125,12 +133,17 @@ def draw_rect(event):
     elif str(event.type) == '5':
         x, y = event.x, event.y
         x1, y1 = canvas.old_coords
-        canvas.create_rectangle((x1, y1, x, y), fill='', outline='red')
+        #canvas.create_rectangle((x1, y1, x, y), fill='', outline='red')
+        draw_rect1(objClass, x1, y1, x, y)
         add_Obj(x1, y1, x, y)
         print(x1, y1, x, y)
 
-def add_Obj(x1, y1, x, y): #TODO show object count in a image, next to the name in image list
-    '''global newObjWind, classes, objClass
+def draw_rect1(classOfObj, x1, y1, x, y):
+    canvas.create_rectangle((x1, y1, x, y), fill='', outline=colors[allClasses.index(classOfObj)])
+    return
+
+def add_Obj(x1, y1, x, y): #TODO show all object count in a image, next to the name in image list
+    '''global newObjWind, classes, objClass TODO: add image info field with count of objects in different classes
     newObjWind = Tk()
     newObjWind.title("New object")
     newObjWind.geometry("200x200")
@@ -149,7 +162,7 @@ def add_Obj(x1, y1, x, y): #TODO show object count in a image, next to the name 
     imgAnnotation.close()
     return
 
-def class_select(event):
+def class_select(event): #TODO: different class objects in different colors
     global objClass
     objClass = classList.get(ANCHOR)
     '''name = imageList.get(ANCHOR).split('.')
@@ -196,7 +209,7 @@ mb.place(x=5, y=2)
 imgLabel = Label(obj, text='Images')
 imgLabel.place(x=5, y=30)
 allImages = ()
-imageVar = StringVar(value=allImages)
+imageVar = StringVar(value=allImages) #TODO: fix list not showing selected item after clicking elsewhere
 imageList = Listbox(obj, listvariable=imageVar, height=7, selectmode='browse')
 imageList.grid(column=0, row=0, sticky='nwes')
 imageList.place(x=5, y=50)
