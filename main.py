@@ -98,6 +98,22 @@ def image_selected(event):
     imgAnnotationPath = pathAnnotation + "/" + name[0] + ".txt"
     if os.path.isfile(imgAnnotationPath):
         display_anotation(imgAnnotationPath)
+        load_img_info(imgAnnotationPath)
+    return
+def load_img_info(imgAnnotationPath):
+    countOfObj = [0] * 20
+    text = "Info:"
+    imgAnnotation = open(imgAnnotationPath, 'r')
+    anotationData = imgAnnotation.readlines()
+    for anData in anotationData:
+        annot = anData.split(';')
+        countOfObj[allClasses.index(annot[0])] += 1
+    for i in range(len(allClasses)):
+        text = text + "\n" + allClasses[i] + "  " + str(countOfObj[i])
+    infoLabel.config(text=text)
+    return
+def update_img_info():
+
     return
 
 def display_anotation(imgAnnotationPath):
@@ -120,9 +136,10 @@ def add_images(fnames):
         img = Image.open(file)
         parts = file.split('/')
         file = parts[len(parts) - 1]
-        imageList.insert(END, file)
         img.save(pathImg + "/" + file)
         mainFile.write(file + '\n')
+        file = "{:<25}".format(file) + "0"
+        imageList.insert(END, file)
     mainFile.close()
     return
 
@@ -160,9 +177,22 @@ def add_Obj(x1, y1, x, y): #TODO show all object count in a image, next to the n
     text = objClass + ";" + objSaveText + "\n"
     imgAnnotation.write(text)
     imgAnnotation.close()
+    update_Obj_Count()
     return
 
-def class_select(event): #TODO: different class objects in different colors
+def update_Obj_Count():
+    text = imageList.get(ANCHOR).strip()
+    number = text[len(text) - 3:len(text)].strip()
+    text = text.rstrip(number)
+    number = int(number)
+    number += 1
+    text = text + str(number)
+    index = imageList.index(ANCHOR)
+    imageList.insert(index + 1, text)
+    imageList.delete(index)
+    return
+
+def class_select(event):
     global objClass
     objClass = classList.get(ANCHOR)
     '''name = imageList.get(ANCHOR).split('.')
@@ -209,11 +239,14 @@ mb.place(x=5, y=2)
 imgLabel = Label(obj, text='Images')
 imgLabel.place(x=5, y=30)
 allImages = ()
-imageVar = StringVar(value=allImages) #TODO: fix list not showing selected item after clicking elsewhere
-imageList = Listbox(obj, listvariable=imageVar, height=7, selectmode='browse')
+imageVar = StringVar(value=allImages)
+imageList = Listbox(obj, listvariable=imageVar, height=7, selectmode='browse', exportselection=False)
 imageList.grid(column=0, row=0, sticky='nwes')
 imageList.place(x=5, y=50)
 imageList.bind("<<ListboxSelect>>", image_selected)
+
+infoLabel = Label(obj, text="Info:")
+infoLabel.place(x=130, y=50)
 
 canvas = Canvas(obj, width=500, height=500)
 canvas.old_coords = None
@@ -229,7 +262,7 @@ objLabel.place(x=5, y=230)
 
 allObj = ()
 objVar = StringVar(value=allObj)
-classList = Listbox(obj, listvariable=objVar, height=20, selectmode='browse')
+classList = Listbox(obj, listvariable=objVar, height=20, selectmode='browse', exportselection=False)
 classList.bind("<<ListboxSelect>>", class_select)
 classList.place(x=5, y=250)
 
