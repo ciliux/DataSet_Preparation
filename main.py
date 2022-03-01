@@ -37,89 +37,86 @@ def newP():
     createButton.place(x=200, y=200)
     return
 
-def directory():
-    dirLabel.config(text=tkinter.filedialog.askdirectory())
-    return
 
 def openP():
     print("Open")
-    projDir = tkinter.filedialog.askdirectory()
-    print(projDir)
+    global path
+    path = tkinter.filedialog.askdirectory()
+    print(path)
+    create_paths()
+    load_classes()
+    load_images(path)
     return
 
 def saveP():
     print("Save")
     return
 
-def createP():
-    global mainFile, path, pathAnnotation, pathImg
-    path = dirLabel.cget("text") + "/" + nameBox.get("1.0", "end-1c")
+def directory():
+    dirLabel.config(text=tkinter.filedialog.askdirectory())
+    return
+
+def create_paths():
+    global pathAnnotation, pathImg
     pathAnnotation = path + "/Annotation"
     pathImg = path + "/Images"
+    return
+
+def createP():
+    global mainFile, path
+    path = dirLabel.cget("text") + "/" + nameBox.get("1.0", "end-1c")
+    create_paths()
     os.mkdir(path)
     os.mkdir(pathAnnotation)
     os.mkdir(pathImg)
     newProj.destroy()
     return
 
-'''def Classes():
-    cW = Tk()
-    cW.title("Classes")
-    cW.geometry("200x300")
-    global classList
-    classList = Listbox(cW, height=10, selectmode='browse')
-    classList.grid(column=0, row=0, sticky='nwes')
-    classList.place(x=5, y=2)
-    for cl in allClasses:
-        classList.insert(END, cl)
-    global cText
-    cText = Text(cW, height=1, width=20)
-    cText.place(x=5, y=180)
-    #addClassButton = Button(cW, text='Add', command=add_Class)
-    addClassButton.place(x=5, y=200)
-    #delClassButton = Button(cW, text='Delete', command=del_Class)
-    delClassButton.place(x=50, y=200)
-    return'''
-
-def image_open(index):
-
-    return
-
 def image_selected(event):
     index = imageList.index(ANCHOR)
-    file = open(path + "/info.txt", 'r')
-    images = file.readlines()
-    img = ImageTk.PhotoImage(Image.open(pathImg + "/" + images[index].removesuffix("\n")))
-
-    canvas.photo = img
-    canvas.create_image(0, 0, image=img, anchor='nw')
-    #objectList.delete(0, END)
+    image_open(index)
     name = imageList.get(ANCHOR).split('.')
     imgAnnotationPath = pathAnnotation + "/" + name[0] + ".txt"
     if os.path.isfile(imgAnnotationPath):
         display_anotation(imgAnnotationPath)
         load_img_info(imgAnnotationPath)
     return
-def load_img_info(imgAnnotationPath):
-    countOfObj = [0] * 20
-    text = "Info:"
+
+def image_open(index):
+    file = open(path + "/info.txt", 'r')
+    images = file.readlines()
+    file.close()
+    img = ImageTk.PhotoImage(Image.open(pathImg + "/" + images[index].removesuffix("\n")))
+    canvas.photo = img
+    canvas.create_image(0, 0, image=img, anchor='nw')
+    return
+
+def read_img_annot(imgAnnotationPath):
     imgAnnotation = open(imgAnnotationPath, 'r')
-    anotationData = imgAnnotation.readlines()
-    for anData in anotationData:
+    annotationData = imgAnnotation.readlines()
+    imgAnnotation.close()
+    return annotationData
+
+def load_img_info(imgAnnotationPath): #TODO: replace label with list, when class pressed show all objects, when object pressed highlight rect
+    countOfObj = [0] * 20
+    text = ["Info:"]
+    annotationData = read_img_annot(imgAnnotationPath)
+    for anData in annotationData:
         annot = anData.split(';')
         countOfObj[allClasses.index(annot[0])] += 1
+
     for i in range(len(allClasses)):
-        text = text + "\n" + allClasses[i] + "  " + str(countOfObj[i])
-    infoLabel.config(text=text)
+        text.append(allClasses[i] + "  " + str(countOfObj[i]))
+    infoLabel.config(text=("\n".join(text)))
     return
+
 def update_img_info():
 
     return
 
 def display_anotation(imgAnnotationPath):
-    imgAnnotation = open(imgAnnotationPath, 'r')
-    anotationData = imgAnnotation.readlines()
-    for anData in anotationData:
+    annotationData = read_img_annot(imgAnnotationPath)
+    for anData in annotationData:
         annot = anData.split(';')
         draw_rect1(annot[0], annot[1], annot[2], annot[3], annot[4])
     return
@@ -131,26 +128,41 @@ def get_image_dir():
     return
 
 def add_images(fnames):
+
     mainFile = open(path + "/info.txt", 'a')
     for file in fnames:
         img = Image.open(file)
         parts = file.split('/')
         file = parts[len(parts) - 1]
+        imgListText = "{:<25}".format(file) + "0"
+        imageList.insert(END, imgListText)
+
         img.save(pathImg + "/" + file)
         mainFile.write(file + '\n')
-        file = "{:<25}".format(file) + "0"
-        imageList.insert(END, file)
     mainFile.close()
     return
 
-def draw_rect(event):
+def load_images(path):
+    imgFile = open(path + "/info.txt", 'r')
+    fnames = imgFile.readlines()
+    count = '0'
+    for file in fnames:
+        imgAnnotPath = pathAnnotation + '/' + file.split('.')[0] + '.txt'
+        if os.path.exists(imgAnnotPath):
+            annotData = read_img_annot(imgAnnotPath)
+            count = str(len(annotData))
+        imgListText = "{:<25}".format(file) + count
+        imageList.insert(END, imgListText)
+    imgFile.close()
+    return
+
+def draw_rect(event): #TODO: object info delete selected object
     if str(event.type) == '4':
         canvas.old_coords = event.x, event.y
 
     elif str(event.type) == '5':
         x, y = event.x, event.y
         x1, y1 = canvas.old_coords
-        #canvas.create_rectangle((x1, y1, x, y), fill='', outline='red')
         draw_rect1(objClass, x1, y1, x, y)
         add_Obj(x1, y1, x, y)
         print(x1, y1, x, y)
@@ -159,22 +171,12 @@ def draw_rect1(classOfObj, x1, y1, x, y):
     canvas.create_rectangle((x1, y1, x, y), fill='', outline=colors[allClasses.index(classOfObj)])
     return
 
-def add_Obj(x1, y1, x, y): #TODO show all object count in a image, next to the name in image list
-    '''global newObjWind, classes, objClass TODO: add image info field with count of objects in different classes
-    newObjWind = Tk()
-    newObjWind.title("New object")
-    newObjWind.geometry("200x200")
-    classes = Listbox(newObjWind, height=10, selectmode='browse')
-    classes.bind("<<ListboxSelect>>", class_select)
-    for cl in allClasses:
-        classes.insert(END, cl)
-    classes.grid(column=0, row=0, sticky='nwes')
-    classes.place(x=5, y=2)
-    global objSaveText'''
+def add_Obj(x1, y1, x, y):
     objSaveText = "{0};{1};{2};{3};".format(x1, y1, x, y)
+    text = objClass + ";" + objSaveText + "\n"
+
     name = imageList.get(ANCHOR).split('.')
     imgAnnotation = open(pathAnnotation + "/" + name[0] + ".txt", 'a')
-    text = objClass + ";" + objSaveText + "\n"
     imgAnnotation.write(text)
     imgAnnotation.close()
     update_Obj_Count()
@@ -195,13 +197,6 @@ def update_Obj_Count():
 def class_select(event):
     global objClass
     objClass = classList.get(ANCHOR)
-    '''name = imageList.get(ANCHOR).split('.')
-    imgAnnotation = open(pathAnnotation + "/" + name[0] + ".txt", 'a')
-    text = objClass + ";" + objSaveText + "\n"
-    imgAnnotation.write(text)
-    imgAnnotation.close()
-    classList.insert(END, objClass)
-    newObjWind.destroy()'''
     return
 
 def add_Class():
@@ -209,6 +204,19 @@ def add_Class():
     classList.insert(END, name)
     cText.delete("1.0", "end-1c")
     allClasses.append(classList.get(END))
+    append_class_file(name)
+    return
+
+def load_classes():
+    classFile = open(path + "/classes.txt", 'r')
+    classNames = classFile.readlines()
+    for name in classNames:
+        name = name.removesuffix('\n')
+        classList.insert(END, name)
+        allClasses.append(name)#classList.get(END))
+    return
+
+def append_class_file(name):
     classLFile = open(path + "/classes.txt", 'a')
     classLFile.write(name + "\n")
     classLFile.close()
