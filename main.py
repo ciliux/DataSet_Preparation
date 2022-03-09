@@ -12,12 +12,14 @@ obj.title("Dataset preparation")
 obj.geometry("1000x700")
 
 allClasses = []
-global colors
+global colors, highLightColor
 colors = ["#FF2400", "#5CFF00", "#00DBFF", "#FF00FF", "#FF7F00", "#D4E01F", "#FF9500"]
+highLightColor = ["#ff0000", "#77ff00", "#fb00ff", "#ff0000"]
 
 #TODO divide code into smaller functions and through classes
 def newP():
     print("New")
+    clear_GUI()
     global newProj
     newProj= Tk()
     newProj.title("New project")
@@ -40,6 +42,7 @@ def newP():
 
 def openP():
     print("Open")
+    clear_GUI()
     global path
     path = tkinter.filedialog.askdirectory()
     print(path)
@@ -50,6 +53,15 @@ def openP():
 
 def saveP():
     print("Save")
+    return
+
+def clear_GUI():
+    imageList.delete("0", END)
+    classList.delete("0", END)
+    canvas.delete("all")
+    infoCList.delete("0", END)
+    infoObjList.delete("0", END)
+    allClasses.clear()
     return
 
 def directory():
@@ -72,11 +84,15 @@ def createP():
     newProj.destroy()
     return
 
+def get_img_annot_path():
+    name = imageList.get(ANCHOR).split('.')
+    pathAnnot = pathAnnotation + "/" + name[0] + ".txt"
+    return pathAnnot
+
 def image_selected(event):
     index = imageList.index(ANCHOR)
     image_open(index)
-    name = imageList.get(ANCHOR).split('.')
-    imgAnnotationPath = pathAnnotation + "/" + name[0] + ".txt"
+    imgAnnotationPath = get_img_annot_path()
     if os.path.isfile(imgAnnotationPath):
         display_anotation(imgAnnotationPath)
         load_img_info(imgAnnotationPath)
@@ -86,6 +102,7 @@ def image_open(index):
     file = open(path + "/info.txt", 'r')
     images = file.readlines()
     file.close()
+    global img
     img = ImageTk.PhotoImage(Image.open(pathImg + "/" + images[index].removesuffix("\n")))
     canvas.photo = img
     canvas.create_image(0, 0, image=img, anchor='nw')
@@ -97,28 +114,62 @@ def read_img_annot(imgAnnotationPath):
     imgAnnotation.close()
     return annotationData
 
-def load_img_info(imgAnnotationPath): #TODO: replace label with list, when class pressed show all objects, when object pressed highlight rect
+def load_img_info(imgAnnotationPath):
     countOfObj = [0] * 20
-    text = ["Info:"]
     annotationData = read_img_annot(imgAnnotationPath)
     for anData in annotationData:
         annot = anData.split(';')
         countOfObj[allClasses.index(annot[0])] += 1
 
+    infoCList.delete('0', END)
     for i in range(len(allClasses)):
-        text.append(allClasses[i] + "  " + str(countOfObj[i]))
-    infoLabel.config(text=("\n".join(text)))
+        infoCList.insert(END, allClasses[i] + "  " + str(countOfObj[i]))
     return
 
-def update_img_info():
+def load_obj_info(event):
+    imgAnnotationPath = get_img_annot_path()
+    selectedClass = infoCList.get(ANCHOR)
+    annotData = read_img_annot(imgAnnotationPath)
+    infoObjList.delete('0', END)
+    for anData in annotData:
+        annot = anData.split(';', maxsplit=1)
+        if annot[0]==selectedClass.split(' ')[0]:
+            infoObjList.insert(END, annot[1].rstrip('\n'))
+    return
 
+def highlight_selected_obj(event):
+    reset_canvas()
+    coords = infoObjList.get(ANCHOR).split(';')
+    draw_rect1(highLightColor[0], coords[0], coords[1], coords[2], coords[3])
+    draw_rect1(highLightColor[1], int(coords[0])+1, int(coords[1])+1, int(coords[2])-1, int(coords[3])-1)
+    return
+
+def reset_canvas():
+    canvas.delete("all")
+    canvas.photo = img
+    canvas.create_image(0, 0, image=img, anchor='nw')
+    display_anotation(get_img_annot_path())
+    return
+
+def del_Object():
+    imgAnnotPath = get_img_annot_path()
+    annotationData = read_img_annot(imgAnnotPath)
+    writer = open(imgAnnotPath, 'w')
+    objToDelete = infoCList.get(ANCHOR).split(' ')[0] + ";" + infoObjList.get(ANCHOR) + "\n"
+    print(annotationData)
+    for anData in annotationData:
+        if anData != objToDelete:
+            writer.write(anData)
+    writer.close()
+    reset_canvas()
+    load_img_info(imgAnnotPath)
     return
 
 def display_anotation(imgAnnotationPath):
     annotationData = read_img_annot(imgAnnotationPath)
     for anData in annotationData:
         annot = anData.split(';')
-        draw_rect1(annot[0], annot[1], annot[2], annot[3], annot[4])
+        draw_rect1(colors[allClasses.index(annot[0])], annot[1], annot[2], annot[3], annot[4])
     return
 
 def get_image_dir():
@@ -128,7 +179,6 @@ def get_image_dir():
     return
 
 def add_images(fnames):
-
     mainFile = open(path + "/info.txt", 'a')
     for file in fnames:
         img = Image.open(file)
@@ -145,8 +195,8 @@ def add_images(fnames):
 def load_images(path):
     imgFile = open(path + "/info.txt", 'r')
     fnames = imgFile.readlines()
-    count = '0'
     for file in fnames:
+        count = '0'
         imgAnnotPath = pathAnnotation + '/' + file.split('.')[0] + '.txt'
         if os.path.exists(imgAnnotPath):
             annotData = read_img_annot(imgAnnotPath)
@@ -156,19 +206,19 @@ def load_images(path):
     imgFile.close()
     return
 
-def draw_rect(event): #TODO: object info delete selected object
-    if str(event.type) == '4':
+def draw_rect(event):
+    if str(event.type) == '4': #and imageList.curselection():
         canvas.old_coords = event.x, event.y
 
-    elif str(event.type) == '5':
+    elif str(event.type) == '5':# and imageList.curselection():
         x, y = event.x, event.y
         x1, y1 = canvas.old_coords
-        draw_rect1(objClass, x1, y1, x, y)
+        draw_rect1(colors[allClasses.index(objClass)], x1, y1, x, y)
         add_Obj(x1, y1, x, y)
         print(x1, y1, x, y)
 
-def draw_rect1(classOfObj, x1, y1, x, y):
-    canvas.create_rectangle((x1, y1, x, y), fill='', outline=colors[allClasses.index(classOfObj)])
+def draw_rect1(color, x1, y1, x, y):
+    canvas.create_rectangle((x1, y1, x, y), fill='', outline=color)
     return
 
 def add_Obj(x1, y1, x, y):
@@ -180,6 +230,7 @@ def add_Obj(x1, y1, x, y):
     imgAnnotation.write(text)
     imgAnnotation.close()
     update_Obj_Count()
+    load_img_info(get_img_annot_path())
     return
 
 def update_Obj_Count():
@@ -236,12 +287,9 @@ mb.grid()
 mb.menu = Menu(mb, tearoff=0)
 mb["menu"] = mb.menu
 
-#classButton = Button(obj, text='Classes', command=Classes)
-#classButton.place(x=75, y=580)
-
 mb.menu.add_command(label="New", command=newP)
 mb.menu.add_command(label="Open", command=openP)
-mb.menu.add_command(label="Save", command=saveP)
+#mb.menu.add_command(label="Save", command=saveP)
 mb.place(x=5, y=2)
 
 imgLabel = Label(obj, text='Images')
@@ -253,14 +301,22 @@ imageList.grid(column=0, row=0, sticky='nwes')
 imageList.place(x=5, y=50)
 imageList.bind("<<ListboxSelect>>", image_selected)
 
-infoLabel = Label(obj, text="Info:")
-infoLabel.place(x=130, y=50)
+infoCList = Listbox(obj, height=7, selectmode='browse', exportselection=False)
+infoCList.place(x=140, y=250)
+infoCList.bind("<<ListboxSelect>>", load_obj_info)
+
+infoObjList = Listbox(obj, height=7, selectmode='browse', exportselection=False)
+infoObjList.place(x=140, y=380)
+infoObjList.bind("<<ListboxSelect>>", highlight_selected_obj)
+
+delObjButton = Button(obj, text="Delete object", command=del_Object)
+delObjButton.place(x=140, y=500)
 
 canvas = Canvas(obj, width=500, height=500)
 canvas.old_coords = None
 canvas.bind('<ButtonPress-1>', draw_rect)
 canvas.bind('<ButtonRelease-1>', draw_rect)
-canvas.pack()
+canvas.place(x=300, y=10)
 
 button = Button(obj, text='Add', command=get_image_dir)
 button.place(x=5, y=180)
