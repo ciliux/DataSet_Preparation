@@ -2,6 +2,6 @@ import os
 
 from PIL import Image, ImageTk
 
-def test():
-    print("succes")
-    return
+def IC_img_annot_path(pathAnnotation, imgName):
+    pathAnnot = pathAnnotation + "/" + imgName.split('.')[0] + ".txt"
+    return pathAnnot

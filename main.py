@@ -5,6 +5,7 @@ from tkinter import*
 from PIL import Image, ImageTk
 
 from imageControl import *
+from DataInOut import *
 
 obj = Tk()
 
@@ -85,8 +86,9 @@ def createP():
     return
 
 def get_img_annot_path():
-    name = imageList.get(ANCHOR).split('.')
-    pathAnnot = pathAnnotation + "/" + name[0] + ".txt"
+    name = imageList.get(ANCHOR)#.split('.')
+    #pathAnnot = pathAnnotation + "/" + name[0] + ".txt"
+    pathAnnot = IC_img_annot_path(pathAnnotation, name)
     return pathAnnot
 
 def image_selected(event):
@@ -99,24 +101,16 @@ def image_selected(event):
     return
 
 def image_open(index):
-    file = open(path + "/info.txt", 'r')
-    images = file.readlines()
-    file.close()
+    images = FR_read_info(path)
     global img
     img = ImageTk.PhotoImage(Image.open(pathImg + "/" + images[index].removesuffix("\n")))
     canvas.photo = img
     canvas.create_image(0, 0, image=img, anchor='nw')
     return
 
-def read_img_annot(imgAnnotationPath):
-    imgAnnotation = open(imgAnnotationPath, 'r')
-    annotationData = imgAnnotation.readlines()
-    imgAnnotation.close()
-    return annotationData
-
 def load_img_info(imgAnnotationPath):
     countOfObj = [0] * 20
-    annotationData = read_img_annot(imgAnnotationPath)
+    annotationData = FR_read_img_annot(imgAnnotationPath)
     for anData in annotationData:
         annot = anData.split(';')
         countOfObj[allClasses.index(annot[0])] += 1
@@ -129,7 +123,7 @@ def load_img_info(imgAnnotationPath):
 def load_obj_info(event):
     imgAnnotationPath = get_img_annot_path()
     selectedClass = infoCList.get(ANCHOR)
-    annotData = read_img_annot(imgAnnotationPath)
+    annotData = FR_read_img_annot(imgAnnotationPath)
     infoObjList.delete('0', END)
     for anData in annotData:
         annot = anData.split(';', maxsplit=1)
@@ -153,20 +147,23 @@ def reset_canvas():
 
 def del_Object():
     imgAnnotPath = get_img_annot_path()
-    annotationData = read_img_annot(imgAnnotPath)
-    writer = open(imgAnnotPath, 'w')
+    annotationData = FR_read_img_annot(imgAnnotPath)
     objToDelete = infoCList.get(ANCHOR).split(' ')[0] + ";" + infoObjList.get(ANCHOR) + "\n"
     print(annotationData)
-    for anData in annotationData:
-        if anData != objToDelete:
-            writer.write(anData)
-    writer.close()
+    annotationData.remove(objToDelete)
+    FW_annotation(imgAnnotPath, annotationData)
+    #writer = open(imgAnnotPath, 'w')
+    #for anData in annotationData:
+    #   if anData != objToDelete:
+    #       writer.write(anData)
+    #writer.close()
     reset_canvas()
     load_img_info(imgAnnotPath)
+    update_Obj_Count()
     return
 
 def display_anotation(imgAnnotationPath):
-    annotationData = read_img_annot(imgAnnotationPath)
+    annotationData = FR_read_img_annot(imgAnnotationPath)
     for anData in annotationData:
         annot = anData.split(';')
         draw_rect1(colors[allClasses.index(annot[0])], annot[1], annot[2], annot[3], annot[4])
@@ -193,24 +190,23 @@ def add_images(fnames):
     return
 
 def load_images(path):
-    imgFile = open(path + "/info.txt", 'r')
-    fnames = imgFile.readlines()
+    fnames = FR_read_info(path)
     for file in fnames:
         count = '0'
         imgAnnotPath = pathAnnotation + '/' + file.split('.')[0] + '.txt'
         if os.path.exists(imgAnnotPath):
-            annotData = read_img_annot(imgAnnotPath)
+            annotData = FR_read_img_annot(imgAnnotPath)
             count = str(len(annotData))
         imgListText = "{:<25}".format(file) + count
         imageList.insert(END, imgListText)
-    imgFile.close()
+
     return
 
 def draw_rect(event):
-    if str(event.type) == '4': #and imageList.curselection():
+    if str(event.type) == '4':
         canvas.old_coords = event.x, event.y
 
-    elif str(event.type) == '5':# and imageList.curselection():
+    elif str(event.type) == '5':
         x, y = event.x, event.y
         x1, y1 = canvas.old_coords
         draw_rect1(colors[allClasses.index(objClass)], x1, y1, x, y)
@@ -226,9 +222,10 @@ def add_Obj(x1, y1, x, y):
     text = objClass + ";" + objSaveText + "\n"
 
     name = imageList.get(ANCHOR).split('.')
-    imgAnnotation = open(pathAnnotation + "/" + name[0] + ".txt", 'a')
-    imgAnnotation.write(text)
-    imgAnnotation.close()
+    #imgAnnotation = open(pathAnnotation + "/" + name[0] + ".txt", 'a')
+    #imgAnnotation.write(text)
+    #imgAnnotation.close()
+    FA_annotation(pathAnnotation, name[0], text)
     update_Obj_Count()
     load_img_info(get_img_annot_path())
     return
@@ -237,13 +234,16 @@ def update_Obj_Count():
     text = imageList.get(ANCHOR).strip()
     number = text[len(text) - 3:len(text)].strip()
     text = text.rstrip(number)
-    number = int(number)
-    number += 1
+    number = get_obj_count()
     text = text + str(number)
     index = imageList.index(ANCHOR)
     imageList.insert(index + 1, text)
     imageList.delete(index)
     return
+
+def get_obj_count():
+    annotation = FR_read_img_annot(get_img_annot_path())
+    return len(annotation)
 
 def class_select(event):
     global objClass
@@ -255,31 +255,32 @@ def add_Class():
     classList.insert(END, name)
     cText.delete("1.0", "end-1c")
     allClasses.append(classList.get(END))
-    append_class_file(name)
+    #append_class_file(name)
+    FA_class(path, name)
     return
 
 def load_classes():
-    classFile = open(path + "/classes.txt", 'r')
-    classNames = classFile.readlines()
+    classNames = FR_read_classes(path)
     for name in classNames:
         name = name.removesuffix('\n')
         classList.insert(END, name)
-        allClasses.append(name)#classList.get(END))
+        allClasses.append(name)
     return
 
-def append_class_file(name):
-    classLFile = open(path + "/classes.txt", 'a')
-    classLFile.write(name + "\n")
-    classLFile.close()
-    return
+#def append_class_file(name):
+#   classLFile = open(path + "/classes.txt", 'a')
+#   classLFile.write(name + "\n")
+#   classLFile.close()
+#   return
 
 def del_Class():
     allClasses.remove(classList.get(ANCHOR))
     classList.delete(ANCHOR)
-    classLFile = open(path + "/classes.txt", 'w')
-    for cl in allClasses:
-        classLFile.write(cl + "\n")
-    classLFile.close()
+    #classLFile = open(path + "/classes.txt", 'w')
+    #for cl in allClasses:
+    #    classLFile.write(cl + "\n")
+    #classLFile.close()
+    FW_class(path, allClasses)
     return
 
 mb = Menubutton(obj, text="Project", background='gray')
